@@ -10,7 +10,7 @@
             <span class="ml-2">
               حساب کابری دارید؟
             </span>
-            <v-btn x-large depressed color="primary">
+            <v-btn :to="{name: 'auth-login'}" x-large depressed color="primary">
               ورود
             </v-btn>
           </section>
@@ -20,84 +20,124 @@
             <v-card-text>
               <v-window v-model="step">
                 <v-window-item :value="1">
-                  <v-form
+                  <ValidationObserver
                     ref="form"
-                    v-model="validfrom1"
-                    lazy-validation
+                    v-slot="{invalid}"
+                    tag="form"
+                    @submit.prevent="submitFrom1"
                   >
-                    <v-text-field
-                      v-model="phoneNumber"
-                      outlined
-                      label="شماره موبایل"
-                      required
-                    />
+                    <ValidationProvider v-slot="{errors}" name="شماره موبایل" rules="required|phoneNumber">
+                      <v-text-field
+                        v-model="phoneNumber"
+                        :error-messages="errors"
+                        outlined
+                        label="شماره موبایل"
+                        required
+                      />
+                    </ValidationProvider>
                     <v-card-actions>
                       <v-spacer />
-                      <v-btn depressed color="primary" @click="step = 2">
+                      <v-btn depressed color="primary" type="submit" :disabled="invalid">
                         ارسال کد تایید
                       </v-btn>
                     </v-card-actions>
-                  </v-form>
+                  </ValidationObserver>
                 </v-window-item>
                 <v-window-item :value="2">
-                  <v-form
-                    ref="form"
-                    v-model="validfrom1"
-                    lazy-validation
+                  <ValidationObserver
+                    ref="form2"
+                    v-slot="{invalid}"
+                    tag="form"
+                    @submit.prevent="submitFrom2"
                   >
                     <label>
                       کد تایید
                     </label>
-                    <section
+                    <ValidationProvider
+                      v-slot="{errors}"
+                      rules="required"
+                      name="کد تایید"
                       dir="ltr"
                     >
-                      <v-otp-input
-                        v-model="otp"
-                        outlined
-                        length="5"
-                        required
-                      />
-                    </section>
+                      <v-input :error-messages="errors">
+                        <v-otp-input
+                          v-model="otp"
+                          outlined
+                          length="6"
+                          required
+                        />
+                      </v-input>
+                    </ValidationProvider>
                     <v-card-actions>
                       <v-spacer />
-                      <v-btn depressed color="primary" @click="step = 3">
+                      <v-btn depressed color="primary" type="submit" :disabled="invalid">
                         کد تایید
                       </v-btn>
                     </v-card-actions>
-                  </v-form>
+                  </ValidationObserver>
                 </v-window-item>
                 <v-window-item :value="3">
-                  <v-form
-                    ref="form"
-                    v-model="validfrom1"
-                    lazy-validation
+                  <ValidationObserver
+                    v-slot="{invalid}"
+                    ref="form3"
+                    tag="form"
+                    @submit.prevent="submitFrom3"
                   >
-                    <v-text-field
-                      v-model="f_name"
-                      outlined
-                      label="نام"
-                      required
-                    />
-                    <v-text-field
-                      v-model="l_name"
-                      outlined
-                      label="نام خانوادگی"
-                      required
-                    />
-                    <v-text-field
-                      v-model="password"
-                      outlined
-                      type="password"
-                      label="رمز عبور"
-                      required
-                    />
+                    <ValidationProvider
+                      v-slot="{errors}"
+                      name="نام"
+                      rules="required"
+                    >
+                      <v-text-field
+                        v-model="f_name"
+                        :error-messages="errors"
+                        outlined
+                        label="نام"
+                        required
+                      />
+                    </ValidationProvider>
+                    <ValidationProvider
+                      v-slot="{errors}"
+                      name="نام خانوادگی"
+                      rules="required"
+                    >
+                      <v-text-field
+                        v-model="l_name"
+                        :error-messages="errors"
+                        outlined
+                        label="نام خانوادگی"
+                        required
+                      />
+                    </ValidationProvider>
+                    <ValidationProvider
+                      v-slot="{errors}"
+                      name="رمز"
+                      rules="required"
+                    >
+                      <v-text-field
+                        v-model="password"
+                        :error-messages="errors"
+                        outlined
+                        :type="showPass? 'text': 'password'"
+                        label="رمز عبور"
+                        required
+                      >
+                        <template #append>
+                          <v-scroll-x-reverse-transition mode="out-in">
+                            <v-icon :key="showPass" @click="showPass = !showPass">
+                              {{ showPass ? 'mdi-eye-off' : 'mdi-eye' }}
+                            </v-icon>
+                          </v-scroll-x-reverse-transition>
+                        </template>
+                      </v-text-field>
+                    </ValidationProvider>
                     <v-card-actions>
                       <v-spacer />
-                      <v-btn depressed color="primary">
+                      <v-btn depressed color="primary" :disabled="invalid" type="submit">
                         ثبت نام
                       </v-btn>
                     </v-card-actions>
-                  </v-form>
+                  </ValidationObserver>
                 </v-window-item>
               </v-window>
             </v-card-text>
@@ -115,12 +155,56 @@ export default {
   data () {
     return {
       step: 1,
-      validfrom1: true,
+      showPass: false,
       phoneNumber: '',
       otp: '',
       f_name: '',
       l_name: '',
       password: ''
+    }
+  },
+  methods: {
+    async submitFrom1 () {
+      try {
+        const result = await this.$axios.$post('/auth/send-validation-sms', {
+          phoneNumber: this.phoneNumber,
+          type: 'newUser'
+        })
+        this.$toast.success(result.message)
+        this.step = 2
+      } catch (e) {
+        this.$toast.error(e.response.data.message)
+      }
+    },
+    async submitFrom2 () {
+      try {
+        const result = await this.$axios.$post('/auth/validate-sms-code', {
+          phoneNumber: this.phoneNumber,
+          code: this.otp
+        })
+        this.$toast.success(result.message)
+        this.step = 3
+      } catch (e) {
+        this.$toast.error(e.response.data.message)
+      }
+    },
+    async submitFrom3 () {
+      try {
+        await this.$axios.$post('/auth/register', {
+          phoneNumber: this.phoneNumber,
+          firstName: this.f_name,
+          lastName: this.l_name,
+          password: this.password
+        })
+        await this.$auth.loginWith('local', {
+          data: {
+            phoneNumber: this.phoneNumber,
+            password: this.password
+          }
+        })
+      } catch (e) {
+        this.$toast.error(e.response.data.message)
+      }
     }
   }
 
