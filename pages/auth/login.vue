@@ -36,6 +36,7 @@
                     v-model="phoneNumber"
                     :error-messages="errors"
                     outlined
+                    name="phoneNumber"
                     label="شماره موبایل"
                     required
                   />
@@ -45,6 +46,7 @@
                     v-model="password"
                     :error-messages="errors"
                     outlined
+                    name="password"
                     :type="showPass? 'text': 'password'"
                     label="رمز عبور"
                     required

@@ -5,7 +5,7 @@ export default function ({
   if (!$auth.loggedIn) {
     return redirect('/auth/login')
   }
-  if ($auth.user.role !== 'admin') {
+  if (!$auth.user.roles.includes('admin')) {
     return redirect('/auth/login')
   }
 }
